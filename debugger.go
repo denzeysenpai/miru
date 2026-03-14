@@ -68,7 +68,7 @@ func (d *Debugger) dateTime() string {
 }
 
 // Catch writes the recovered panic to console + log file.
-func (d *Debugger) Catch(r interface{}) {
+func (d *Debugger) Catch(r any) {
 	loc := d.getLocation(2)
 	dt := d.dateTime()
 	caught := fmt.Sprintf("Caught: %v", r)
@@ -82,7 +82,7 @@ func (d *Debugger) Catch(r interface{}) {
 }
 
 // Out is like console.log — console only, no file. Any number of args, one line each.
-func (d *Debugger) Out(args ...interface{}) {
+func (d *Debugger) Out(args ...any) {
 	loc := d.getLocation(2)
 	dt := d.dateTime()
 	for _, a := range args {
@@ -92,7 +92,7 @@ func (d *Debugger) Out(args ...interface{}) {
 	}
 }
 
-func formatValue(v interface{}) string {
+func formatValue(v any) string {
 	if v == nil {
 		return "nil"
 	}
@@ -109,14 +109,23 @@ func formatValue(v interface{}) string {
 	}
 }
 
-// Test runs fn() and checks its return against expectedOutput. No args for fn.
+// Test runs fn (with optional args) and checks its return against expectedOutput.
+// No args: debug.Test("add", fn, 4). With args: debug.Test("add", fn, 7, 3, 4).
 // IncludeTests in config controls whether we also append to the log file.
-func (d *Debugger) Test(funcName string, fn interface{}, expectedOutput interface{}) {
+func (d *Debugger) Test(funcName string, fn any, expectedOutput any, args ...any) {
 	start := time.Now()
 	passed := false
 	fv := reflect.ValueOf(fn)
 	if fv.Kind() != reflect.Func {
 		d.Out("Test error: fn is not a function")
+		return
+	}
+	argVals := make([]reflect.Value, len(args))
+	for i, a := range args {
+		argVals[i] = reflect.ValueOf(a)
+	}
+	if fv.Type().NumIn() != len(argVals) {
+		d.Out(fmt.Sprintf("Test error: fn expects %d args, got %d", fv.Type().NumIn(), len(argVals)))
 		return
 	}
 	func() {
@@ -125,13 +134,13 @@ func (d *Debugger) Test(funcName string, fn interface{}, expectedOutput interfac
 				passed = false
 			}
 		}()
-		out := fv.Call(nil)
+		out := fv.Call(argVals)
 		if len(out) == 1 {
 			passed = reflect.DeepEqual(out[0].Interface(), expectedOutput)
 		} else if len(out) == 0 {
 			passed = expectedOutput == nil
 		} else {
-			var results []interface{}
+			var results []any
 			for i := 0; i < len(out); i++ {
 				results = append(results, out[i].Interface())
 			}

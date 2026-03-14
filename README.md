@@ -109,10 +109,14 @@ Structs, maps, and slices are serialized as JSON.
 
 ## Testing: `Test`
 
-Run a function (no arguments) and compare its return value to the expected value:
+Run a function and compare its return value to the expected value. Works with or without arguments:
 
 ```go
+// no args
 debug.Test("add", func() int { return 2 + 2 }, 4)
+
+// with args: funcName, fn, expected, then args to pass to fn
+debug.Test("add", func(a, b int) int { return a + b }, 7, 3, 4)
 debug.Test("fail", func() int { return 1 }, 2)
 ```
 
@@ -125,6 +129,16 @@ Output:
 
 - Green: `[Miru Test]`; PASSED is green, FAILED is red
 - Yellow: dateTime and duration
+
+## Stack trace: `CheckStack`
+
+Print the current goroutine's stack trace (console only, no file):
+
+```go
+debug.CheckStack()
+```
+
+Output: `[Miru CheckStack]` header plus indented stack lines. With `Colorful`, the goroutine line is yellow.
 
 ## Tracing: `Trace`
 

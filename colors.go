@@ -68,3 +68,9 @@ func (d *Debugger) formatWalkHeader(dateTime, location, typeSummary string) stri
 	dt := d.yellow(dateTime)
 	return fmt.Sprintf("%s:\t%s\t%s\t->\t%s", tag, dt, location, typeSummary)
 }
+
+func (d *Debugger) formatCheckStackHeader(dateTime, location string) string {
+	tag := d.green("[Miru CheckStack]")
+	dt := d.yellow(dateTime)
+	return fmt.Sprintf("%s:\t%s\t%s\t->\tgoroutine stack", tag, dt, location)
+}

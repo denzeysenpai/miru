@@ -8,7 +8,7 @@ import (
 const walkIndent = "  "
 
 // Walk pretty-prints a struct, slice, or map to the console. Depth comes from config (WalkDepth); -1 = no limit.
-func (d *Debugger) Walk(v interface{}) {
+func (d *Debugger) Walk(v any) {
 	loc := d.getLocation(2)
 	dt := d.dateTime()
 	maxDepth := d.config.WalkDepth
