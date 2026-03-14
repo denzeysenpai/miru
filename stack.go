@@ -25,26 +25,28 @@ func (d *Debugger) CheckStack() {
 		buf = make([]byte, len(buf)*2)
 	}
 
-	d.printStackPretty(string(buf))
+	body := d.printStackPretty(string(buf))
+	fmt.Print(body)
+	d.emit("CheckStack", header+"\n"+body)
 }
 
-// printStackPretty prints the stack with consistent indentation and optional color.
-func (d *Debugger) printStackPretty(raw string) {
+// printStackPretty formats the stack and returns the string.
+func (d *Debugger) printStackPretty(raw string) string {
+	var out strings.Builder
 	lines := strings.Split(strings.TrimSuffix(raw, "\n"), "\n")
 	for i, line := range lines {
 		indent := stackIndent
 		if i == 0 {
-			// goroutine 1 [running]:
 			if d.config.Colorful {
 				line = d.yellow(line)
 			}
 		} else {
-			// frame lines (function then file:line); indent file lines a bit more
 			if strings.HasPrefix(line, "\t") {
 				indent = stackIndent + "  "
 				line = strings.TrimPrefix(line, "\t")
 			}
 		}
-		fmt.Println(indent + line)
+		out.WriteString(indent + line + "\n")
 	}
+	return out.String()
 }

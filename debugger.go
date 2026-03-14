@@ -3,6 +3,7 @@ package miru
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -15,6 +16,7 @@ type Debugger struct {
 	config      DebugConfig
 	writer      *writer
 	currentFunc string
+	dashboard   *dashboardHub
 }
 
 func NewDebugger() *Debugger {
@@ -67,6 +69,12 @@ func (d *Debugger) dateTime() string {
 	return time.Now().Format("2006-01-02 15:04:05.000")
 }
 
+func (d *Debugger) emit(tag, body string) {
+	if d.dashboard != nil {
+		d.dashboard.Send(LogEntry{Tag: tag, Body: body})
+	}
+}
+
 // Catch writes the recovered panic to console + log file.
 func (d *Debugger) Catch(r any) {
 	loc := d.getLocation(2)
@@ -77,6 +85,7 @@ func (d *Debugger) Catch(r any) {
 	}
 	line := d.formatCatchLine(dt, loc, caught)
 	fmt.Println(line)
+	d.emit("Catch", line)
 	plain := plainLine("[Miru Catch]", dt, loc, caught)
 	_ = d.writer.append(plain)
 }
@@ -89,6 +98,7 @@ func (d *Debugger) Out(args ...any) {
 		value := formatValue(a)
 		line := d.formatOutLine(dt, loc, value)
 		fmt.Println(line)
+		d.emit("Out", line)
 	}
 }
 
@@ -162,10 +172,23 @@ func (d *Debugger) Test(funcName string, fn any, expectedOutput any, args ...any
 	}
 	line := d.formatTestLine(dt, funcName, status, "("+ms+")", passed)
 	fmt.Println(line)
+	d.emit("Test", line)
 	if d.config.IncludeTests {
 		plain := plainLine("[Miru Test]", dt, funcName+"\t->\t"+status, "("+ms+")")
 		_ = d.writer.append(plain)
 	}
+}
+
+// RemoteDashboard starts a web server that streams logs/traces live. Port 0 or negative = 8765.
+// Returns the server so you can call srv.Shutdown(ctx) when done.
+func (d *Debugger) RemoteDashboard(port int) *http.Server {
+	d.mu.Lock()
+	if d.dashboard == nil {
+		d.dashboard = newDashboardHub()
+	}
+	hub := d.dashboard
+	d.mu.Unlock()
+	return hub.RunServer(port)
 }
 
 // Trace measures how long until the deferred func runs. Use: defer debug.Trace("name")()
@@ -177,5 +200,6 @@ func (d *Debugger) Trace(name string) func() {
 		dt := d.dateTime()
 		line := d.formatTraceLine(dt, name, ms)
 		fmt.Println(line)
+		d.emit("Trace", line)
 	}
 }

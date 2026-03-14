@@ -3,6 +3,7 @@ package miru
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 const walkIndent = "  "
@@ -20,6 +21,7 @@ func (d *Debugger) Walk(v any) {
 	if !val.IsValid() {
 		line := d.formatWalkHeader(dt, loc, "nil")
 		fmt.Println(line)
+		d.emit("Walk", line)
 		return
 	}
 
@@ -42,29 +44,33 @@ func (d *Debugger) Walk(v any) {
 	default:
 		line := d.formatWalkHeader(dt, loc, fmt.Sprintf("%v", v))
 		fmt.Println(line)
+		d.emit("Walk", line)
 		return
 	}
 
 	line := d.formatWalkHeader(dt, loc, typeSummary)
 	fmt.Println(line)
-	d.walkValue(val, 1, maxDepth)
+	var body strings.Builder
+	body.WriteString(line)
+	body.WriteByte('\n')
+	d.walkValue(val, 1, maxDepth, &body)
+	d.emit("Walk", body.String())
 }
 
-func (d *Debugger) walkValue(val reflect.Value, depth, maxDepth int) {
+func (d *Debugger) walkValue(val reflect.Value, depth, maxDepth int, sb *strings.Builder) {
 	if !val.IsValid() {
-		d.printIndented(depth, "nil")
+		d.printIndented(depth, "nil", sb)
 		return
 	}
-	// -1 means no limit
 	if maxDepth >= 0 && depth > maxDepth {
-		d.printIndented(depth, "...")
+		d.printIndented(depth, "...", sb)
 		return
 	}
 
 	kind := val.Kind()
 	if kind == reflect.Ptr {
 		if val.IsNil() {
-			d.printIndented(depth, "nil")
+			d.printIndented(depth, "nil", sb)
 			return
 		}
 		val = val.Elem()
@@ -74,9 +80,9 @@ func (d *Debugger) walkValue(val reflect.Value, depth, maxDepth int) {
 	switch kind {
 	case reflect.Interface:
 		if val.IsNil() {
-			d.printIndented(depth, "nil")
+			d.printIndented(depth, "nil", sb)
 		} else {
-			d.walkValue(val.Elem(), depth, maxDepth)
+			d.walkValue(val.Elem(), depth, maxDepth, sb)
 		}
 		return
 	case reflect.Struct:
@@ -87,35 +93,35 @@ func (d *Debugger) walkValue(val reflect.Value, depth, maxDepth int) {
 			}
 			fv := val.Field(i)
 			if d.walkPrimitive(fv) {
-				d.printIndented(depth, fmt.Sprintf("%s: %v", field.Name, fv.Interface()))
+				d.printIndented(depth, fmt.Sprintf("%s: %v", field.Name, fv.Interface()), sb)
 				continue
 			}
-			d.printIndented(depth, field.Name+":")
-			d.walkValue(fv, depth+1, maxDepth)
+			d.printIndented(depth, field.Name+":", sb)
+			d.walkValue(fv, depth+1, maxDepth, sb)
 		}
 	case reflect.Slice, reflect.Array:
 		for i := 0; i < val.Len(); i++ {
 			ev := val.Index(i)
 			if d.walkPrimitive(ev) {
-				d.printIndented(depth, fmt.Sprintf("[%d]: %v", i, ev.Interface()))
+				d.printIndented(depth, fmt.Sprintf("[%d]: %v", i, ev.Interface()), sb)
 				continue
 			}
-			d.printIndented(depth, fmt.Sprintf("[%d]:", i))
-			d.walkValue(ev, depth+1, maxDepth)
+			d.printIndented(depth, fmt.Sprintf("[%d]:", i), sb)
+			d.walkValue(ev, depth+1, maxDepth, sb)
 		}
 	case reflect.Map:
 		for _, key := range val.MapKeys() {
 			mv := val.MapIndex(key)
 			keyStr := fmt.Sprintf("%v", key.Interface())
 			if d.walkPrimitive(mv) {
-				d.printIndented(depth, fmt.Sprintf("%s: %v", keyStr, mv.Interface()))
+				d.printIndented(depth, fmt.Sprintf("%s: %v", keyStr, mv.Interface()), sb)
 				continue
 			}
-			d.printIndented(depth, keyStr+":")
-			d.walkValue(mv, depth+1, maxDepth)
+			d.printIndented(depth, keyStr+":", sb)
+			d.walkValue(mv, depth+1, maxDepth, sb)
 		}
 	default:
-		d.printIndented(depth, fmt.Sprintf("%v", val.Interface()))
+		d.printIndented(depth, fmt.Sprintf("%v", val.Interface()), sb)
 	}
 }
 
@@ -135,10 +141,15 @@ func (d *Debugger) walkPrimitive(v reflect.Value) bool {
 	}
 }
 
-func (d *Debugger) printIndented(depth int, s string) {
+func (d *Debugger) printIndented(depth int, s string, sb *strings.Builder) {
 	prefix := ""
 	for i := 0; i < depth; i++ {
 		prefix += walkIndent
 	}
-	fmt.Println(prefix + s)
+	line := prefix + s
+	fmt.Println(line)
+	if sb != nil {
+		sb.WriteString(line)
+		sb.WriteByte('\n')
+	}
 }
