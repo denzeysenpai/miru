@@ -19,6 +19,15 @@ type Debugger struct {
 	dashboard   *dashboardHub
 }
 
+type TestGroup struct {
+	debugger *Debugger
+	name     string
+	index    int
+	passed   int
+	total    int
+	closed   bool
+}
+
 func NewDebugger() *Debugger {
 	cfg := DefaultConfig()
 	return NewDebuggerWithConfig(cfg)
@@ -201,5 +210,109 @@ func (d *Debugger) Trace(name string) func() {
 		line := d.formatTraceLine(dt, name, ms)
 		fmt.Println(line)
 		d.emit("Trace", line)
+	}
+}
+
+func (d *Debugger) TestGroup(name string) *TestGroup {
+	dt := d.dateTime()
+
+	tag := d.green("[Miru TGroup Start]")
+	date := d.yellow(dt)
+
+	line := fmt.Sprintf("%s:\t%s\t%s", tag, date, name)
+
+	fmt.Println(line)
+	d.emit("Test", line)
+
+	if d.config.IncludeTests {
+		plain := plainLine("[Miru TGroup Start]", dt, name, "")
+		_ = d.writer.append(plain)
+	}
+
+	return &TestGroup{
+		debugger: d,
+		name:     name,
+	}
+}
+
+func (tg *TestGroup) Test(label string, condition bool) {
+	if tg.closed {
+		panic("miru: TestGroup already closed")
+	}
+
+	d := tg.debugger
+	dt := d.dateTime()
+
+	status := "FAILED"
+	passed := false
+
+	if condition {
+		status = "PASSED"
+		passed = true
+		tg.passed++
+	}
+
+	var statusColored string
+	if passed {
+		statusColored = d.green(status)
+	} else {
+		statusColored = d.red(status)
+	}
+
+	date := d.yellow(dt)
+
+	line := fmt.Sprintf("[%d]\t%s\t%s\t->\t%s",
+		tg.index,
+		date,
+		label,
+		statusColored,
+	)
+
+	fmt.Println(line)
+	d.emit("Test", line)
+
+	if d.config.IncludeTests {
+		plain := fmt.Sprintf("[%d]\t%s\t%s\t->\t%s",
+			tg.index,
+			dt,
+			label,
+			status,
+		)
+
+		_ = d.writer.append(plain)
+	}
+
+	tg.index++
+	tg.total++
+}
+
+func (tg *TestGroup) Close() {
+
+	if tg.closed {
+		panic("miru: TestGroup already closed")
+	}
+
+	tg.closed = true
+
+	d := tg.debugger
+	dt := d.dateTime()
+
+	result := fmt.Sprintf("(%d / %d)", tg.passed, tg.total)
+
+	tag := d.green("[Miru TGroup Close]")
+	date := d.yellow(dt)
+
+	line := fmt.Sprintf("%s:\t%s\t%s",
+		tag,
+		date,
+		result,
+	)
+
+	fmt.Println(line)
+	d.emit("Test", line)
+
+	if d.config.IncludeTests {
+		plain := plainLine("[Miru TGroup Close]", dt, result, "")
+		_ = d.writer.append(plain)
 	}
 }
