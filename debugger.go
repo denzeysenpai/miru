@@ -316,3 +316,33 @@ func (tg *TestGroup) Close() {
 		_ = d.writer.append(plain)
 	}
 }
+
+// Shows runtime memory statistics.
+func (d *Debugger) Mem() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	dt := d.dateTime()
+
+	tag := d.green("[Miru Mem]")
+	date := d.yellow(dt)
+
+	body := fmt.Sprintf(
+		"alloc=%dMB heap=%dMB sys=%dMB goroutines=%d gc=%d",
+		m.Alloc/1024/1024,
+		m.HeapAlloc/1024/1024,
+		m.Sys/1024/1024,
+		runtime.NumGoroutine(),
+		m.NumGC,
+	)
+
+	line := fmt.Sprintf("%s:\t%s\tmemory\t->\t%s", tag, date, body)
+
+	fmt.Println(line)
+	d.emit("Trace", line)
+
+	if d.config.IncludeTests {
+		plain := plainLine("[Miru Mem]", dt, "memory", body)
+		_ = d.writer.append(plain)
+	}
+}
