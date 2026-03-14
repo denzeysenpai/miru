@@ -139,6 +139,18 @@ Output:
 - Green: `[Miru Test]`; PASSED is green, FAILED is red
 - Yellow: dateTime and duration
 
+## Remote dashboard: `RemoteDashboard`
+
+Serve a small web UI that shows logs and traces live (SSE). Call once to start the server; all Catch, Out, Test, Trace, Walk, and CheckStack output is streamed to the page.
+
+```go
+srv := debug.RemoteDashboard(8765) // port 0 or negative = 8765
+// open http://localhost:8765
+// when done: srv.Shutdown(ctx)
+```
+
+No log file writing from the dashboard; it only streams what’s already printed to the console.
+
 ## Stack trace: `CheckStack`
 
 Print the current goroutine's stack trace (console only, no file):
