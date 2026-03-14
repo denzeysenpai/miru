@@ -42,14 +42,14 @@ func SomeFunction(debug *miru.Debugger) {
 
 ## Config
 
-| Field         | Type     | Default           | Description |
-|---------------|----------|-------------------|-------------|
-| OutputPath    | string   | `"./Debug Output"`| Directory for log files |
-| FolderBy      | FolderBy | FolderNone        | `miru.Month`, `miru.Year`, or `miru.FolderNone` |
-| Colorful      | bool     | false             | Colored console output |
-| WithContext   | bool     | true*             | Include function name and line number |
-| IncludeTests  | bool     | false             | When true, `Test()` results are also written to the log file |
-| WalkDepth     | int      | 5                 | Max depth for `Walk` pretty-print; -1 = no limit |
+| Field        | Type     | Default              | Description                                                   |
+| ------------ | -------- | -------------------- | ------------------------------------------------------------- |
+| OutputPath   | string   | `"./Debug Output"` | Directory for log files                                       |
+| FolderBy     | FolderBy | FolderNone           | `miru.Month`, `miru.Year`, or `miru.FolderNone`         |
+| Colorful     | bool     | false                | Colored console output                                        |
+| WithContext  | bool     | true*                | Include function name and line number                         |
+| IncludeTests | bool     | false                | When true,`Test()` results are also written to the log file |
+| WalkDepth    | int      | 5                    | Max depth for `Walk` pretty-print; -1 = no limit            |
 
 \* Use `miru.DefaultConfig()` to get a config with all defaults (including `WithContext: true`).
 
@@ -106,6 +106,15 @@ Output (one line per argument):
 - Yellow: dateTime
 
 Structs, maps, and slices are serialized as JSON.
+
+## Tap: `Tap`
+
+Pass a value through a function (e.g. to log it) and get the same value back. Like Ruby’s `tap`. This way, you can log and get the value in the same line.
+
+```go
+x := debug.Tap(compute(), func(v interface{}) { debug.Out(v) })
+// x is the result of compute(); you also logged it
+```
 
 ## Testing: `Test`
 

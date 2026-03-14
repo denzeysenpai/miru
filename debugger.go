@@ -92,6 +92,12 @@ func (d *Debugger) Out(args ...any) {
 	}
 }
 
+// Tap passes v to fn (e.g. to log it) and returns v unchanged. Like Ruby’s tap.
+func (d *Debugger) Tap(v interface{}, fn func(interface{})) interface{} {
+	fn(v)
+	return v
+}
+
 func formatValue(v any) string {
 	if v == nil {
 		return "nil"
