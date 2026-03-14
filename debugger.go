@@ -28,11 +28,13 @@ type TestGroup struct {
 	closed   bool
 }
 
+// Creates a new debugger with default configuration
 func NewDebugger() *Debugger {
 	cfg := DefaultConfig()
 	return NewDebuggerWithConfig(cfg)
 }
 
+// Creates a new debugger with custom configuration
 func NewDebuggerWithConfig(cfg DebugConfig) *Debugger {
 	cfg.setDefaults()
 	d := &Debugger{config: cfg, writer: newWriter(cfg)}
