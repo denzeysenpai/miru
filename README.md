@@ -49,8 +49,31 @@ func SomeFunction(debug *miru.Debugger) {
 | Colorful      | bool     | false             | Colored console output |
 | WithContext   | bool     | true*             | Include function name and line number |
 | IncludeTests  | bool     | false             | When true, `Test()` results are also written to the log file |
+| WalkDepth     | int      | 5                 | Max depth for `Walk` pretty-print; -1 = no limit |
 
 \* Use `miru.DefaultConfig()` to get a config with all defaults (including `WithContext: true`).
+
+## Pretty-print: `Walk`
+
+Inspect structs, slices, and maps with indented output. Depth is limited by `WalkDepth` in config (-1 = no limit).
+
+```go
+type User struct{ Name string; Age int }
+debug.Walk([]User{{"Alice", 30}, {"Bob", 25}})
+debug.Walk(myMap)
+```
+
+Output (first line uses same style as other Miru logs; rest is indented):
+
+```
+[Miru Walk]:	<dateTime>	main:42	->	slice (len 2)
+  [0]:
+    Name: Alice
+    Age: 30
+  [1]:
+    Name: Bob
+    Age: 25
+```
 
 ## Panic recovery: `Catch`
 

@@ -62,3 +62,9 @@ func (d *Debugger) formatTraceLine(dateTime, name, duration string) string {
 	ms := d.yellow(duration)
 	return fmt.Sprintf("%s:\t%s\t%s\t->\t%s", tag, dt, name, ms)
 }
+
+func (d *Debugger) formatWalkHeader(dateTime, location, typeSummary string) string {
+	tag := d.green("[Miru Walk]")
+	dt := d.yellow(dateTime)
+	return fmt.Sprintf("%s:\t%s\t%s\t->\t%s", tag, dt, location, typeSummary)
+}
