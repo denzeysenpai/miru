@@ -10,7 +10,6 @@ import (
 
 const logFileName = "debug.log"
 
-// writer handles file logging with optional folder partitioning.
 type writer struct {
 	mu         sync.Mutex
 	outputPath string
@@ -24,7 +23,7 @@ func newWriter(cfg DebugConfig) *writer {
 	}
 }
 
-// resolveDir returns the directory for the current time (possibly with date subfolder).
+// output dir, plus YYYY-MM or YYYY subdir if FolderBy is set
 func (w *writer) resolveDir() (string, error) {
 	base := w.outputPath
 	switch w.folderBy {
@@ -39,7 +38,6 @@ func (w *writer) resolveDir() (string, error) {
 	return base, nil
 }
 
-// append writes a line to the log file (and creates dir/file if needed).
 func (w *writer) append(line string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -57,7 +55,7 @@ func (w *writer) append(line string) error {
 	return err
 }
 
-// plainLine returns the same content as the console but without ANSI codes (for file).
+// no ANSI, for writing to file
 func plainLine(tag, dateTime, location, rest string) string {
 	return fmt.Sprintf("%s:\t%s\t%s\t->\t%s", tag, dateTime, location, rest)
 }

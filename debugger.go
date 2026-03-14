@@ -10,28 +10,24 @@ import (
 	"time"
 )
 
-// Debugger provides panic recovery, logging, testing, and tracing.
 type Debugger struct {
 	mu          sync.Mutex
 	config      DebugConfig
 	writer      *writer
-	currentFunc string // set by Func() for Catch location
+	currentFunc string
 }
 
-// NewDebugger returns a new Debugger with default config.
 func NewDebugger() *Debugger {
 	cfg := DefaultConfig()
 	return NewDebuggerWithConfig(cfg)
 }
 
-// NewDebuggerWithConfig returns a new Debugger with the given config.
 func NewDebuggerWithConfig(cfg DebugConfig) *Debugger {
 	cfg.setDefaults()
 	d := &Debugger{config: cfg, writer: newWriter(cfg)}
 	return d
 }
 
-// Config applies the given config (with defaults for empty fields).
 func (d *Debugger) Config(cfg DebugConfig) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -40,8 +36,7 @@ func (d *Debugger) Config(cfg DebugConfig) {
 	d.writer = newWriter(cfg)
 }
 
-// Func sets the current function name for subsequent Catch/Out/Trace (used for location in output).
-// Call this at the start of the function you are debugging.
+// Func sets the name used in log lines (call it at the top of the function).
 func (d *Debugger) Func(name string) {
 	d.mu.Lock()
 	d.currentFunc = name
@@ -72,13 +67,11 @@ func (d *Debugger) dateTime() string {
 	return time.Now().Format("2006-01-02 15:04:05.000")
 }
 
-// Catch logs a recovered panic to the console and to the log file.
-// Format: [Miru Catch]: <dateTime> SomeFunction:lineNumber -> Caught: <details>
+// Catch writes the recovered panic to console + log file.
 func (d *Debugger) Catch(r interface{}) {
 	loc := d.getLocation(2)
 	dt := d.dateTime()
 	caught := fmt.Sprintf("Caught: %v", r)
-	// More detailed message for errors
 	if err, ok := r.(error); ok {
 		caught = fmt.Sprintf("Caught: %v", err)
 	}
@@ -88,8 +81,7 @@ func (d *Debugger) Catch(r interface{}) {
 	_ = d.writer.append(plain)
 }
 
-// Out prints values to the console only (like console.log). Never writes to log files.
-// Each argument is printed on its own line with [Miru Out]: dateTime location -> value.
+// Out is like console.log — console only, no file. Any number of args, one line each.
 func (d *Debugger) Out(args ...interface{}) {
 	loc := d.getLocation(2)
 	dt := d.dateTime()
@@ -100,7 +92,6 @@ func (d *Debugger) Out(args ...interface{}) {
 	}
 }
 
-// formatValue returns a string representation suitable for logging (JSON for structs/maps/slices).
 func formatValue(v interface{}) string {
 	if v == nil {
 		return "nil"
@@ -118,9 +109,8 @@ func formatValue(v interface{}) string {
 	}
 }
 
-// Test runs fn (a function with no arguments) and compares its return value to expectedOutput.
-// Displays [Miru Test]: dateTime funcName -> PASSED/FAILED (duration).
-// When IncludeTests is true, also appends the result to the log file.
+// Test runs fn() and checks its return against expectedOutput. No args for fn.
+// IncludeTests in config controls whether we also append to the log file.
 func (d *Debugger) Test(funcName string, fn interface{}, expectedOutput interface{}) {
 	start := time.Now()
 	passed := false
@@ -129,7 +119,6 @@ func (d *Debugger) Test(funcName string, fn interface{}, expectedOutput interfac
 		d.Out("Test error: fn is not a function")
 		return
 	}
-	// Recover from panic in fn
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -164,9 +153,7 @@ func (d *Debugger) Test(funcName string, fn interface{}, expectedOutput interfac
 	}
 }
 
-// Trace returns a function to be deferred to measure execution time.
-// Usage: defer debug.Trace("someFunc")()
-// Output: [Miru Trace]: dateTime someFunc -> 0.25ms
+// Trace measures how long until the deferred func runs. Use: defer debug.Trace("name")()
 func (d *Debugger) Trace(name string) func() {
 	start := time.Now()
 	return func() {

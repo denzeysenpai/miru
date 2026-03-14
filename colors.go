@@ -2,7 +2,6 @@ package miru
 
 import "fmt"
 
-// ANSI color codes (supported on Windows 10+ and Unix).
 const (
 	ansiReset   = "\033[0m"
 	ansiRed     = "\033[31m"
@@ -31,7 +30,6 @@ func (d *Debugger) yellow(s string) string {
 	return s
 }
 
-// formatCatchLine returns the console line for Catch (with optional colors).
 func (d *Debugger) formatCatchLine(dateTime, location, caught string) string {
 	tag := d.red("[Miru Catch]")
 	dt := d.yellow(dateTime)
@@ -39,14 +37,12 @@ func (d *Debugger) formatCatchLine(dateTime, location, caught string) string {
 	return fmt.Sprintf("%s:\t%s\t%s\t->\t%s", tag, dt, location, msg)
 }
 
-// formatOutLine returns the console line for Out.
 func (d *Debugger) formatOutLine(dateTime, location, value string) string {
 	tag := d.red("[Miru Out]")
 	dt := d.yellow(dateTime)
 	return fmt.Sprintf("%s:\t%s\t%s\t->\t%s", tag, dt, location, value)
 }
 
-// formatTestLine returns the console line for Test (PASSED green, FAILED red).
 func (d *Debugger) formatTestLine(dateTime, funcName, status, duration string, passed bool) string {
 	tag := d.green("[Miru Test]")
 	dt := d.yellow(dateTime)
@@ -60,7 +56,6 @@ func (d *Debugger) formatTestLine(dateTime, funcName, status, duration string, p
 	return fmt.Sprintf("%s:\t%s\t%s\t->\t%s\t%s", tag, dt, funcName, statusColored, ms)
 }
 
-// formatTraceLine returns the console line for Trace.
 func (d *Debugger) formatTraceLine(dateTime, name, duration string) string {
 	tag := d.green("[Miru Trace]")
 	dt := d.yellow(dateTime)
