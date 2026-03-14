@@ -19,6 +19,15 @@ type Debugger struct {
 	dashboard   *dashboardHub
 }
 
+type TestGroup struct {
+	debugger *Debugger
+	name     string
+	index    int
+	passed   int
+	total    int
+	closed   bool
+}
+
 func NewDebugger() *Debugger {
 	cfg := DefaultConfig()
 	return NewDebuggerWithConfig(cfg)
@@ -202,4 +211,68 @@ func (d *Debugger) Trace(name string) func() {
 		fmt.Println(line)
 		d.emit("Trace", line)
 	}
+}
+
+func (d *Debugger) TestGroup(name string) *TestGroup {
+	dt := d.dateTime()
+
+	line := fmt.Sprintf("[Miru TGroup Start]:\t%s\t%s", dt, name)
+
+	fmt.Println(line)
+	d.emit("Test", line)
+
+	return &TestGroup{
+		debugger: d,
+		name:     name,
+	}
+}
+
+func (tg *TestGroup) Test(label string, condition bool) {
+
+	if tg.closed {
+		panic("miru: TestGroup already closed")
+	}
+
+	d := tg.debugger
+	dt := d.dateTime()
+
+	status := "FAILED"
+	if condition {
+		status = "PASSED"
+		tg.passed++
+	}
+
+	line := fmt.Sprintf("[%d]\t%s\t%s\t->\t%s",
+		tg.index,
+		dt,
+		label,
+		status,
+	)
+
+	fmt.Println(line)
+	d.emit("Test", line)
+
+	tg.index++
+	tg.total++
+}
+
+func (tg *TestGroup) Close() {
+
+	if tg.closed {
+		panic("miru: TestGroup already closed")
+	}
+
+	tg.closed = true
+
+	d := tg.debugger
+	dt := d.dateTime()
+
+	line := fmt.Sprintf("[Miru TGroup Close]:\t%s\t(%d / %d)",
+		dt,
+		tg.passed,
+		tg.total,
+	)
+
+	fmt.Println(line)
+	d.emit("Test", line)
 }
