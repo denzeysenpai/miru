@@ -40,6 +40,18 @@ func SomeFunction(debug *miru.Debugger) {
 }
 ```
 
+## Using Default: `NewDebugger`
+
+You can also skip the config and just stick to the defaults.
+
+```
+func TestBasics() {
+	debug := miru.NewDebugger()
+
+	debug.Out("Hello There!")
+}
+```
+
 ## Config
 
 | Field        | Type     | Default              | Description                                                   |
@@ -177,6 +189,37 @@ Output:
 
 - Green: `[Miru Trace]`
 - Yellow: dateTime and duration
+
+## Test Groups: `TestGroup`
+
+Allows users to organize their tests when running their application, useful for testing environment or config variables you need to set up before the application runs. `TestGroup` returns an object used for adding tests.
+
+### Implementation
+
+```Go
+
+var debug Debugger
+
+func TestMyVars(dbUser *string, dbPass *string) {
+	dtg := debug.TestGroup("Environment Variables Test")
+
+	dtg.Test("Is username imported", dbUser != nil)
+	dtg.Test("Is password imported", dbPass != nil)
+
+	dtg.Close() // this will close the test group and will no longer allow other tests
+
+	dtg.Test("Some other test", false) // panic, once it is closed it cannot be used
+}
+
+```
+
+### Test Group: `Test`
+
+Handles the provided test, takes an argument string for its label and the condition to test, useful for simple testing.
+
+### Test Group: `Close`
+
+Closes the test group.
 
 ## License
 

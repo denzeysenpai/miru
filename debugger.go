@@ -213,6 +213,7 @@ func (d *Debugger) Trace(name string) func() {
 	}
 }
 
+// Allows users to organize their tests when running their application, useful for testing environment or config variables you need to set up before the application runs. `TestGroup` returns an object used for adding tests.
 func (d *Debugger) TestGroup(name string) *TestGroup {
 	dt := d.dateTime()
 
@@ -235,6 +236,7 @@ func (d *Debugger) TestGroup(name string) *TestGroup {
 	}
 }
 
+// Handles the provided test, takes an argument string for its label and the condition to test, useful for simple testing.
 func (tg *TestGroup) Test(label string, condition bool) {
 	if tg.closed {
 		panic("miru: TestGroup already closed")
@@ -286,6 +288,7 @@ func (tg *TestGroup) Test(label string, condition bool) {
 	tg.total++
 }
 
+// Closes the test group.
 func (tg *TestGroup) Close() {
 
 	if tg.closed {
