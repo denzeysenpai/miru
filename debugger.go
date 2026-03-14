@@ -216,10 +216,18 @@ func (d *Debugger) Trace(name string) func() {
 func (d *Debugger) TestGroup(name string) *TestGroup {
 	dt := d.dateTime()
 
-	line := fmt.Sprintf("[Miru TGroup Start]:\t%s\t%s", dt, name)
+	tag := d.green("[Miru TGroup Start]")
+	date := d.yellow(dt)
+
+	line := fmt.Sprintf("%s:\t%s\t%s", tag, date, name)
 
 	fmt.Println(line)
 	d.emit("Test", line)
+
+	if d.config.IncludeTests {
+		plain := plainLine("[Miru TGroup Start]", dt, name, "")
+		_ = d.writer.append(plain)
+	}
 
 	return &TestGroup{
 		debugger: d,
@@ -228,7 +236,6 @@ func (d *Debugger) TestGroup(name string) *TestGroup {
 }
 
 func (tg *TestGroup) Test(label string, condition bool) {
-
 	if tg.closed {
 		panic("miru: TestGroup already closed")
 	}
@@ -237,20 +244,43 @@ func (tg *TestGroup) Test(label string, condition bool) {
 	dt := d.dateTime()
 
 	status := "FAILED"
+	passed := false
+
 	if condition {
 		status = "PASSED"
+		passed = true
 		tg.passed++
 	}
 
+	var statusColored string
+	if passed {
+		statusColored = d.green(status)
+	} else {
+		statusColored = d.red(status)
+	}
+
+	date := d.yellow(dt)
+
 	line := fmt.Sprintf("[%d]\t%s\t%s\t->\t%s",
 		tg.index,
-		dt,
+		date,
 		label,
-		status,
+		statusColored,
 	)
 
 	fmt.Println(line)
 	d.emit("Test", line)
+
+	if d.config.IncludeTests {
+		plain := fmt.Sprintf("[%d]\t%s\t%s\t->\t%s",
+			tg.index,
+			dt,
+			label,
+			status,
+		)
+
+		_ = d.writer.append(plain)
+	}
 
 	tg.index++
 	tg.total++
@@ -267,12 +297,22 @@ func (tg *TestGroup) Close() {
 	d := tg.debugger
 	dt := d.dateTime()
 
-	line := fmt.Sprintf("[Miru TGroup Close]:\t%s\t(%d / %d)",
-		dt,
-		tg.passed,
-		tg.total,
+	result := fmt.Sprintf("(%d / %d)", tg.passed, tg.total)
+
+	tag := d.green("[Miru TGroup Close]")
+	date := d.yellow(dt)
+
+	line := fmt.Sprintf("%s:\t%s\t%s",
+		tag,
+		date,
+		result,
 	)
 
 	fmt.Println(line)
 	d.emit("Test", line)
+
+	if d.config.IncludeTests {
+		plain := plainLine("[Miru TGroup Close]", dt, result, "")
+		_ = d.writer.append(plain)
+	}
 }
