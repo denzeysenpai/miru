@@ -32,22 +32,33 @@ func newDashboardHub() *dashboardHub {
 
 func (h *dashboardHub) Send(e LogEntry) {
 	e.At = time.Now().Format("2006-01-02 15:04:05.000")
+
+	data, err := json.Marshal(e)
+	if err != nil {
+		return
+	}
+
 	h.mu.Lock()
+
 	h.entries = append(h.entries, e)
 	if len(h.entries) > dashboardMaxEntries {
 		h.entries = h.entries[len(h.entries)-dashboardMaxEntries:]
 	}
-	data, _ := json.Marshal(e)
+
+	clients := make([]chan []byte, 0, len(h.clients))
 	for ch := range h.clients {
+		clients = append(clients, ch)
+	}
+
+	h.mu.Unlock()
+
+	for _, ch := range clients {
 		select {
 		case ch <- data:
 		default:
-			// client slow, skip this event
 		}
 	}
-	h.mu.Unlock()
 }
-
 func (h *dashboardHub) Recent() []LogEntry {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
