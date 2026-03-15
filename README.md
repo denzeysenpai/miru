@@ -178,23 +178,107 @@ Output:
 - Green: `[Miru Trace]`
 - Yellow: dateTime and duration
 
+## Error Flow: `IfErr`
 
+`IfErr` provides a **fluent error-handling helper** that lets you react to errors without repetitive `if err != nil` blocks.
 
+It supports chaining actions like:
 
-## Error logging: `IfErr`
+* `Do()` – run code when an error exists
+* `Else()` – run code when no error exists
+* `Panic()` – panic if an error exists
+* `Retry()` – retry an operation multiple times
 
-Logs an error  **only if it is not nil** . This is a convenient shorthand for quickly inspecting errors without writing repetitive `if err != nil` blocks.
+`IfErr` also **logs the error automatically** when it is not `nil`.
+
+### Usage
 
 ```go
-file, err := os.Open("data.txt")
-debug.IfErr(err)
+err := doSomething()
+
+debug.IfErr(err).
+    Do(func() {
+        debug.Out("operation failed")
+    }).
+    Else(func() {
+        debug.Out("operation succeeded")
+    })
 ```
 
-If `err` is `nil`, nothing happens.
+### Running Code When an Error Exists: `Do`
 
-If an error exists, it is printed to the **console** and written to the  **log file** .
+`Do` executes a function  **only if an error occurred**.
 
+```go
+debug.IfErr(err).Do(func() {
+    debug.Out("error occurred")
+})
+```
 
+### Handling Success: `Else`
+
+`Else` executes a function  **only if no error occurred**.
+
+```go
+debug.IfErr(err).
+    Do(func() {
+        debug.Out("failed")
+    }).
+    Else(func() {
+        debug.Out("success")
+    })
+```
+
+### Panic on Error: `Panic`
+
+`Panic` panics if an error exists.
+
+```go
+debug.IfErr(err).Panic()
+```
+
+Equivalent to:
+
+```go
+if err != nil {
+    panic(err)
+}
+```
+
+### Retrying Operations: `Retry`
+
+`Retry` repeatedly executes a function until it succeeds or the retry limit is reached.
+
+```go
+err = debug.IfErr(err).Retry(3, func() error {
+    return reconnect()
+})
+```
+
+#### Behavior
+
+* Only runs if the original error is **not nil**
+* Stops retrying once the function returns `nil`
+* Logs each failed retry attempt
+
+#### Output Sample
+
+```
+[Miru Err]: <dateTime> main:32 -> connection failed
+[Miru Out]: retry 1/3 failed: connection refused
+[Miru Out]: retry 2/3 failed: connection refused
+```
+
+### Summary
+
+`IfErr` enables concise and readable error handling:
+
+```go
+debug.IfErr(err).Do(...)
+debug.IfErr(err).Do(...).Else(...)
+debug.IfErr(err).Panic()
+debug.IfErr(err).Retry(3, reconnect)
+```
 
 ## License
 

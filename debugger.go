@@ -349,17 +349,36 @@ func (d *Debugger) Mem() {
 	}
 }
 
+type ErrAction struct {
+	err  error
+	d    *Debugger
+	prev string
+}
+
+type ErrActionNext struct {
+	err  error
+	d    *Debugger
+	prev string
+}
+
+var (
+	IF_ERR string = "if_error"
+	DO     string = "then_do"
+	ELSE   string = "else_do"
+	PANIC  string = "panic"
+)
+
 // Logs it if it receives an error.
-func (d *Debugger) IfErr(err error) {
+func (d *Debugger) IfErr(err error) *ErrAction {
 	if err == nil {
-		return
+		return &ErrAction{err: nil, d: d}
 	}
 
 	loc := d.getLocation(2)
 	dt := d.dateTime()
 
 	line := fmt.Sprintf(
-		"%s:\t%s\t%s\t->\t%s",
+		"%s: %s\t%s\t->\t%s",
 		d.red("[Miru Err]"),
 		d.yellow(dt),
 		loc,
@@ -371,4 +390,63 @@ func (d *Debugger) IfErr(err error) {
 
 	plain := plainLine("[Miru Err]", dt, loc, err.Error())
 	_ = d.writer.append(plain)
+
+	return &ErrAction{
+		err:  err,
+		d:    d,
+		prev: IF_ERR,
+	}
+}
+
+func (e *ErrAction) Do(fn func()) *ErrActionNext {
+
+	if e.err != nil {
+		fn()
+	}
+
+	e.prev = DO
+
+	return &ErrActionNext{
+		err: e.err,
+		d:   e.d,
+	}
+}
+
+func (e *ErrActionNext) Else(fn func()) {
+	e.prev = ELSE
+
+	if e.err == nil {
+		fn()
+	}
+}
+
+func (e *ErrAction) Panic() {
+
+	if e.err != nil {
+		panic(e.err)
+	}
+
+	e.prev = PANIC
+}
+
+func (e *ErrAction) Retry(times int, fn func() error) error {
+
+	if e.err == nil {
+		return nil
+	}
+
+	var err error
+
+	for i := 0; i < times; i++ {
+
+		err = fn()
+
+		if err == nil {
+			return nil
+		}
+
+		e.d.Out(fmt.Sprintf("retry %d/%d failed: %v", i+1, times, err))
+	}
+
+	return err
 }
