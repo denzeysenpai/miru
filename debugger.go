@@ -377,8 +377,8 @@ func (d *Debugger) IfErr(err error) *ErrAction {
 		return &ErrAction{err: nil, d: d}
 	}
 
-	loc := d.getLocation(2)
 	dt := d.dateTime()
+	loc := d.getLocation(2)
 
 	line := fmt.Sprintf(
 		"%s: %s\t%s\t->\t%s",
