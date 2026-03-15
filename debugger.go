@@ -348,3 +348,27 @@ func (d *Debugger) Mem() {
 		_ = d.writer.append(plain)
 	}
 }
+
+// Logs it if it receives an error.
+func (d *Debugger) IfErr(err error) {
+	if err == nil {
+		return
+	}
+
+	loc := d.getLocation(2)
+	dt := d.dateTime()
+
+	line := fmt.Sprintf(
+		"%s:\t%s\t%s\t->\t%s",
+		d.red("[Miru Err]"),
+		d.yellow(dt),
+		loc,
+		err.Error(),
+	)
+
+	fmt.Println(line)
+	d.emit("Error", line)
+
+	plain := plainLine("[Miru Err]", dt, loc, err.Error())
+	_ = d.writer.append(plain)
+}

@@ -178,6 +178,24 @@ Output:
 - Green: `[Miru Trace]`
 - Yellow: dateTime and duration
 
+
+
+
+## Error logging: `IfErr`
+
+Logs an error  **only if it is not nil** . This is a convenient shorthand for quickly inspecting errors without writing repetitive `if err != nil` blocks.
+
+```go
+file, err := os.Open("data.txt")
+debug.IfErr(err)
+```
+
+If `err` is `nil`, nothing happens.
+
+If an error exists, it is printed to the **console** and written to the  **log file** .
+
+
+
 ## License
 
 MIT
