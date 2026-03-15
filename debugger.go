@@ -96,8 +96,8 @@ func (d *Debugger) Catch(r any) {
 	}
 	line := d.formatCatchLine(dt, loc, caught)
 	fmt.Println(line)
-	d.emit("Catch", line)
 	plain := plainLine("[Miru Catch]", dt, loc, caught)
+	d.emit("Catch", plain)
 	_ = d.writer.append(plain)
 }
 
@@ -108,14 +108,26 @@ func (d *Debugger) Out(args ...any) {
 	for _, a := range args {
 		value := formatValue(a)
 		line := d.formatOutLine(dt, loc, value)
+		plain := plainLine("[Miru Out]", dt, loc, value)
 		fmt.Println(line)
-		d.emit("Out", line)
+		d.emit("Out", plain)
 	}
 }
 
 // Tap passes v to fn (e.g. to log it) and returns v unchanged. Like Ruby’s tap.
-func (d *Debugger) Tap(v interface{}, fn func(interface{})) interface{} {
+func (d *Debugger) Tap(v any, fn func(any)) any {
 	fn(v)
+	loc := d.getLocation(2)
+	dt := d.dateTime()
+	plain := plainLine("[Miru Tap]", dt, loc, fmt.Sprintf("%v", v))
+
+	if s, ok := v.(fmt.Stringer); ok {
+		plain = plainLine("[Miru Tap]", dt, loc, s.String())
+	} else {
+		plain = plainLine("[Miru Tap]", dt, loc, fmt.Sprintf("%v", v))
+	}
+
+	d.emit("Tap", plain)
 	return v
 }
 
@@ -182,10 +194,10 @@ func (d *Debugger) Test(funcName string, fn any, expectedOutput any, args ...any
 		status = "FAILED"
 	}
 	line := d.formatTestLine(dt, funcName, status, "("+ms+")", passed)
+	plain := plainLine("[Miru Test]", dt, funcName+"\t->\t"+status, "("+ms+")")
 	fmt.Println(line)
-	d.emit("Test", line)
+	d.emit("Test", plain)
 	if d.config.IncludeTests {
-		plain := plainLine("[Miru Test]", dt, funcName+"\t->\t"+status, "("+ms+")")
 		_ = d.writer.append(plain)
 	}
 }
@@ -199,6 +211,7 @@ func (d *Debugger) RemoteDashboard(port int) *http.Server {
 	}
 	hub := d.dashboard
 	d.mu.Unlock()
+
 	return hub.RunServer(port)
 }
 
@@ -210,8 +223,9 @@ func (d *Debugger) Trace(name string) func() {
 		ms := fmt.Sprintf("%.2fms", elapsed.Seconds()*1000)
 		dt := d.dateTime()
 		line := d.formatTraceLine(dt, name, ms)
+		plain := plainLine("Trace", dt, name, ms)
 		fmt.Println(line)
-		d.emit("Trace", line)
+		d.emit("Trace", plain)
 	}
 }
 
@@ -224,11 +238,12 @@ func (d *Debugger) TestGroup(name string) *TestGroup {
 
 	line := fmt.Sprintf("%s:\t%s\t%s", tag, date, name)
 
+	plain := plainLine("[Miru TGroup Start]", dt, name, "")
+
 	fmt.Println(line)
-	d.emit("Test", line)
+	d.emit("Test", plain)
 
 	if d.config.IncludeTests {
-		plain := plainLine("[Miru TGroup Start]", dt, name, "")
 		_ = d.writer.append(plain)
 	}
 
@@ -273,15 +288,16 @@ func (tg *TestGroup) Test(label string, condition bool) {
 	)
 
 	fmt.Println(line)
-	d.emit("Test", line)
+	plain := fmt.Sprintf("[%d]\t%s\t%s\t->\t%s",
+		tg.index,
+		dt,
+		label,
+		status,
+	)
+
+	d.emit("Test", plain)
 
 	if d.config.IncludeTests {
-		plain := fmt.Sprintf("[%d]\t%s\t%s\t->\t%s",
-			tg.index,
-			dt,
-			label,
-			status,
-		)
 
 		_ = d.writer.append(plain)
 	}
@@ -344,10 +360,10 @@ func (d *Debugger) Mem() {
 	line := fmt.Sprintf("%s:\t%s\tmemory\t->\t%s", tag, date, body)
 
 	fmt.Println(line)
-	d.emit("Trace", line)
+	plain := plainLine("[Miru Mem]", dt, "memory", body)
+	d.emit("Mem", plain)
 
 	if d.config.IncludeTests {
-		plain := plainLine("[Miru Mem]", dt, "memory", body)
 		_ = d.writer.append(plain)
 	}
 }
@@ -389,9 +405,9 @@ func (d *Debugger) IfErr(err error) *ErrAction {
 	)
 
 	fmt.Println(line)
-	d.emit("Error", line)
-
 	plain := plainLine("[Miru Err]", dt, loc, err.Error())
+	d.emit("Error", plain)
+
 	_ = d.writer.append(plain)
 
 	return &ErrAction{
