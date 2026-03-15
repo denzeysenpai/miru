@@ -2,6 +2,24 @@
 
 A Go debugger toolkit library for developers: structured panic recovery, logging, testing, and tracing with useful context (function, file, line).
 
+## Contents
+
+- [Install](#install)
+- [Quick start](#quick-start)
+- [Config](#config)
+- [Pretty-print: `Walk`](#pretty-print-walk)
+- [Panic recovery: `Catch`](#panic-recovery-catch)
+- [Console logging: `Out`](#console-logging-out)
+- [Tap: `Tap`](#tap-tap)
+- [Testing: `Test`](#testing-test)
+- [Test Groups: `TestGroup`](#test-groups-testgroup)
+- [Remote dashboard: `RemoteDashboard`](#remote-dashboard-remotedashboard)
+- [Stack trace: `CheckStack`](#stack-trace-checkstack)
+- [Tracing: `Trace`](#tracing-trace)
+- [Memory Statistics: `Mem`](#memory-statistics-mem)
+- [Error Flow: `IfErr`](#error-flow-iferr)
+- [License](#license)
+
 ## Install
 
 ```bash
@@ -36,6 +54,21 @@ func SomeFunction(debug *miru.Debugger) {
 			debug.Catch(r)
 		}
 	}()
+	
+	// Console logging
+	debug.Out("Processing user data", userID)
+	
+	// Memory statistics
+	debug.Mem()
+	
+	// Group related tests
+	tg := debug.TestGroup("User Operations")
+	defer tg.Close()
+	tg.Test("user creation", createUser("test@example.com") != nil)
+	tg.Test("user validation", validateEmail("test@example.com"))
+	
+	// Trace execution time
+	defer debug.Trace("database operation")()
 	// ... your code ...
 }
 ```
@@ -151,6 +184,33 @@ Output:
 - Green: `[Miru Test]`; PASSED is green, FAILED is red
 - Yellow: dateTime and duration
 
+## Test Groups: `TestGroup`
+
+Group related tests together and get a summary of passed/failed tests:
+
+```go
+tg := debug.TestGroup("User Authentication")
+defer tg.Close()
+
+tg.Test("valid login", authenticate("user", "pass") == nil)
+tg.Test("invalid password", authenticate("user", "wrong") != nil)
+tg.Test("empty username", authenticate("", "pass") != nil)
+```
+
+Output:
+
+```
+[Miru TGroup Start]:	<dateTime>	User Authentication
+[0]	<dateTime>	valid login	->	PASSED
+[1]	<dateTime>	invalid password	->	PASSED
+[2]	<dateTime>	empty username	->	PASSED
+[Miru TGroup Close]:	<dateTime>	(3 / 3)
+```
+
+- Green: `[Miru TGroup Start]` and `[Miru TGroup Close]` headers
+- PASSED tests are green, FAILED tests are red
+- Final summary shows (passed / total) count
+
 ## Remote dashboard: `RemoteDashboard`
 
 Serve a small web UI that shows logs and traces live (SSE). Call once to start the server; all Catch, Out, Test, Trace, Walk, and CheckStack output is streamed to the page.
@@ -190,6 +250,125 @@ Output:
 - Green: `[Miru Trace]`
 - Yellow: dateTime and duration
 
+## Memory Statistics: `Mem`
+
+Display runtime memory statistics including allocation, heap usage, system memory, goroutine count, and GC cycles:
+
+```go
+debug.Mem()
+```
+
+Output:
+
+```
+[Miru Mem]:	<dateTime>	memory	->	alloc=12MB heap=8MB sys=45MB goroutines=3 gc=15
+```
+
+- Green: `[Miru Mem]`
+- Yellow: dateTime
+- Shows alloc (current allocation), heap (heap allocation), sys (system memory), goroutines (active goroutines), and gc (GC cycles)
+
+## Error Flow: `IfErr`
+
+`IfErr` provides a **fluent error-handling helper** that lets you react to errors without repetitive `if err != nil` blocks.
+
+It supports chaining actions like:
+
+* `Do()` – run code when an error exists
+* `Else()` – run code when no error exists
+* `Panic()` – panic if an error exists
+* `Retry()` – retry an operation multiple times
+
+`IfErr` also **logs the error automatically** when it is not `nil`.
+
+### Usage
+
+```go
+err := doSomething()
+
+debug.IfErr(err).
+    Do(func() {
+        debug.Out("operation failed")
+    }).
+    Else(func() {
+        debug.Out("operation succeeded")
+    })
+```
+
+### Running Code When an Error Exists: `Do`
+
+`Do` executes a function  **only if an error occurred**.
+
+```go
+debug.IfErr(err).Do(func() {
+    debug.Out("error occurred")
+})
+```
+
+### Handling Success: `Else`
+
+`Else` executes a function  **only if no error occurred**.
+
+```go
+debug.IfErr(err).
+    Do(func() {
+        debug.Out("failed")
+    }).
+    Else(func() {
+        debug.Out("success")
+    })
+```
+
+### Panic on Error: `Panic`
+
+`Panic` panics if an error exists.
+
+```go
+debug.IfErr(err).Panic()
+```
+
+Equivalent to:
+
+```go
+if err != nil {
+    panic(err)
+}
+```
+
+### Retrying Operations: `Retry`
+
+`Retry` repeatedly executes a function until it succeeds or the retry limit is reached.
+
+```go
+err = debug.IfErr(err).Retry(3, func() error {
+    return reconnect()
+})
+```
+
+#### Behavior
+
+* Only runs if the original error is **not nil**
+* Stops retrying once the function returns `nil`
+* Logs each failed retry attempt
+
+#### Output Sample
+
+```
+[Miru Err]: <dateTime> main:32 -> connection failed
+[Miru Out]: retry 1/3 failed: connection refused
+[Miru Out]: retry 2/3 failed: connection refused
+```
+
+### Summary
+
+`IfErr` enables concise and readable error handling:
+
+```go
+debug.IfErr(err).Do(...)
+debug.IfErr(err).Do(...).Else(...)
+debug.IfErr(err).Panic()
+debug.IfErr(err).Retry(3, reconnect)
+```
 ## Test Groups: `TestGroup`
 
 Allows users to organize their tests when running their application, useful for testing environment or config variables you need to set up before the application runs. `TestGroup` returns an object used for adding tests.
