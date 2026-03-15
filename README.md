@@ -213,7 +213,7 @@ Output:
 
 ## Remote dashboard: `RemoteDashboard`
 
-Serve a small web UI that shows logs and traces live (SSE). Call once to start the server; all Catch, Out, Test, Trace, Walk, and CheckStack output is streamed to the page.
+Serve a small web UI that shows logs and traces live (SSE). Call once to start the server; all Catch, Out, Test, Trace, Walk, CheckStack, and Mem output is streamed to the page.
 
 ```go
 srv := debug.RemoteDashboard(8765) // port 0 or negative = 8765
@@ -221,7 +221,67 @@ srv := debug.RemoteDashboard(8765) // port 0 or negative = 8765
 // when done: srv.Shutdown(ctx)
 ```
 
-No log file writing from the dashboard; it only streams what’s already printed to the console.
+No log file writing from the dashboard; it only streams what's already printed to the console.
+
+### Dashboard Features
+
+The web dashboard provides a live view of your application's debug output with the following features:
+
+**Live Log Streaming**
+- Real-time updates via Server-Sent Events (SSE)
+- All log types displayed: Catch, Out, Test, Trace, Walk, CheckStack, Mem, Tap, Error
+- Timestamps and source context for each entry
+
+**Log Type Filtering**
+- Clickable count cards for each log type
+- Shows live counts: All, Errors, Logs, Tests, Traces, Walk, Stack, Memory, Tap, IfErr
+- Color-coded entries matching the console output
+- Active filter highlighted in blue
+
+**Search**
+- Real-time search across all log entries
+- Searches in timestamps, log types, and message bodies
+- Matching text highlighted in yellow
+- Press Ctrl+F to focus search, Esc to clear
+
+**Auto-Scroll Toggle**
+- Enable/disable automatic scrolling to latest logs
+- Visual indicator shows active state
+- Press Ctrl+S to toggle
+
+**Export Logs**
+- Download filtered logs as timestamped text file
+- Exports only currently visible entries
+- Press Ctrl+E to export
+
+**Keyboard Shortcuts**
+- Ctrl+F - Focus search box
+- Ctrl+S - Toggle auto-scroll
+- Ctrl+E - Export logs
+- Ctrl+C - Clear logs
+- Esc - Clear search
+- ? - Toggle shortcuts help panel
+
+### Usage Example
+
+```go
+func main() {
+    debug := miru.NewDebugger()
+    
+    // Start dashboard on port 8765
+    srv := debug.RemoteDashboard(8765)
+    defer srv.Shutdown(context.Background())
+    
+    // Your application code here
+    // All debug output will appear in the dashboard
+    debug.Out("Application started")
+    
+    // Keep running or use a wait group
+    select {}
+}
+```
+
+Access the dashboard at `http://localhost:8765` (or your chosen port).
 
 ## Stack trace: `CheckStack`
 

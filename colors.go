@@ -38,7 +38,7 @@ func (d *Debugger) formatCatchLine(dateTime, location, caught string) string {
 }
 
 func (d *Debugger) formatOutLine(dateTime, location, value string) string {
-	tag := d.red("[Miru Out]")
+	tag := d.green("[Miru Out]")
 	dt := d.yellow(dateTime)
 	return fmt.Sprintf("%s: %s\t%s\t->\t%s", tag, dt, location, value)
 }
